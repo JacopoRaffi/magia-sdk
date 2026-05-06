@@ -21,7 +21,7 @@
 SHELL 			:= /bin/bash
 
 CMAKE_BUILDDIR  	?= $(CURR_DIR)/build
-MAGIA_RTL_DIR 		?= ..
+MAGIA_RTL_DIR 		?= $(HOME)/MAGIA
 BUILD_DIR 		?= $(MAGIA_RTL_DIR)/sw/tests/$(test)
 GVSOC_DIR 		?= ./gvsoc
 CURR_DIR		?= $(shell pwd)

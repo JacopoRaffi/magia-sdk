@@ -141,7 +141,7 @@ int main(void){
      */
     uint32_t len_y = tile_w * 2;
     uint32_t obi_addr_y = obi_addr_id + (tile_w * tile_w * 2);
-    uint32_t axi_addr_y = (x_id == 0) ? (uint32_t) y_in + (y_id * tile_w * 2) : (uint32_t) y_out + (y_id * tile_w * 2);
+    uint32_t axi_addr_y = (x_id == 0) ? (uint32_t) y_inp + (y_id * tile_w * 2) : (uint32_t) y_out + (y_id * tile_w * 2);
     
     idma_memcpy_1d(&idma_ctrl, 0, axi_addr_y, obi_addr_y, len_y);
     eu_idma_wait_a2o(&eu_ctrl, WAIT_MODE);
@@ -153,7 +153,7 @@ int main(void){
     uint32_t std_w  = K_SIZE*2;
     uint32_t reps_w = (uint32_t) tile_h;
     uint32_t obi_addr_w = obi_addr_y + (tile_w * 2);
-    uint32_t axi_addr_w = (uint32_t) w_in + (x_id * tile_h * K_SIZE * 2) + (y_id * tile_w * 2); 
+    uint32_t axi_addr_w = (uint32_t) w_inp + (x_id * tile_h * K_SIZE * 2) + (y_id * tile_w * 2); 
 
     idma_memcpy_2d(&idma_ctrl, 0, axi_addr_w, obi_addr_w, len_w, std_w, reps_w);
     eu_idma_wait_a2o(&eu_ctrl, WAIT_MODE);
@@ -163,7 +163,7 @@ int main(void){
      */
     uint32_t len_x = tile_h * 2;
     uint32_t obi_addr_x = obi_addr_w + (tile_w * tile_h * 2);
-    uint32_t axi_addr_x = (uint32_t) x_in + (x_id * tile_h * 2); 
+    uint32_t axi_addr_x = (uint32_t) x_inp + (x_id * tile_h * 2); 
 
     idma_memcpy_1d(&idma_ctrl, 0, axi_addr_x, obi_addr_x, len_x);
     eu_idma_wait_a2o(&eu_ctrl, WAIT_MODE);
