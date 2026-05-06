@@ -39,6 +39,12 @@ inline uint32_t get_hartid(){
     return hartid;
 }
 
+inline void zero_buffer(uint32_t* buffer, uint32_t size){ //simple util to zero the metrics buffer
+    for (uint32_t i = 0; i < size; i++){
+        *(volatile uint16_t*)(buffer + i) = 0;
+    }
+}
+
 // Lookup table indicating the id of row synchronization
 inline uint32_t row_id_lookup(volatile uint32_t hartid_y){
   if (hartid_y < MESH_Y_TILES/2) return 2*hartid_y;
