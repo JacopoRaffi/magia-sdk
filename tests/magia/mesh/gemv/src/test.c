@@ -173,12 +173,14 @@ int main(void){
     uint32_t axi_addr_x = (uint32_t) x_inp + (x_id * tile_h * 2); 
 
     for(uint32_t r = 0; r < REPETITIONS; r++){
+        if(hartid == 0){
+            for (uint32_t i = 0; i < N_SIZE; i++){ //need to be reinitialized else we have wrong results
+                *(volatile uint16_t*)(y_out + i) = 0;
+            }
+        }
         fsync_sync_global(&fsync_ctrl);
         eu_fsync_wait(&eu_ctrl, WAIT_MODE); //wait tiles to start "together"
         start_run = perf_get_cycles();
-        if(hartid == 0){
-            printf("START RUN %d\n", start_run);
-        }
 
         start_l2_l1 = perf_get_cycles();
         idma_memcpy_1d(&idma_ctrl, 0, axi_addr_x, obi_addr_x, len_x);
@@ -230,6 +232,8 @@ int main(void){
             eu_idma_wait_o2a(&eu_ctrl, WAIT_MODE);
             end_l2_l1 = perf_get_cycles();
             l2_l1_cycles[(hartid)*REPETITIONS + r] += (end_l2_l1 - start_l2_l1);
+            end_run = perf_get_cycles();
+            run_cycles[(hartid)*REPETITIONS + r] = end_run - start_run;
         }
 
         axi_addr_y = (uint32_t) y_out + (y_id*tile_w*2);
@@ -364,6 +368,9 @@ int main(void){
         }
         printf("END_DF\n");
     }
+
+    fsync_sync_global(&fsync_ctrl);
+    eu_fsync_wait(&eu_ctrl, WAIT_MODE); //wait for all tiles to have completed and writte their values
 
     /**
     * 7. Check results.

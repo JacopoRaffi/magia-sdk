@@ -41,7 +41,7 @@ inline uint32_t get_hartid(){
 
 inline void zero_buffer(uint32_t* buffer, uint32_t size){ //simple util to zero the metrics buffer
     for (uint32_t i = 0; i < size; i++){
-        *(volatile uint16_t*)(buffer + i) = 0;
+        *(volatile uint32_t*)(buffer + i) = 0;
     }
 }
 

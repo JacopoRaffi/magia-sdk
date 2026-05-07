@@ -1,19 +1,25 @@
 #!/bin/bash
 
 NAME=$1
+MATRIX_GEN=$2 # yes or no (if yes call the script to generate the matrices)
 
 if [ -z "$NAME" ]; then
     echo "Usage: $0 <name_of_executable>"
     exit 1
 fi
 
+if [ -z "$MATRIX_GEN" ]; then
+    echo "Usage: $0 <name_of_executable> <matrix_gen (yes/no)>"
+    exit 1
+fi
+
 # -----------------------------------------------------------------------
 # Sweep parameters — edit these to change the configs
 # -----------------------------------------------------------------------
-TILES_LIST=(4)
+TILES_LIST=(2 4 8 16)
 M_LIST=(1) 
-N_LIST=(128 256 512 1024)
-K_LIST=(128 256 512 1024)
+N_LIST=(1) # 1024 2048)
+K_LIST=(1) # 1024 2048)
 # TILES_LIST=(16)  # for mm_os just re-do from 16x16
 # M_LIST=(128)
 # N_LIST=(64 128)
@@ -50,7 +56,9 @@ for TILES in "${TILES_LIST[@]}"; do
                 CONFIG="tiles=${TILES} M=${M} N=${N} K=${K}"
 
                 # Generate test.h
-                python3 matrix_generator.py \
+                if [ "$MATRIX_GEN" == "yes" ]; then
+                    echo "Generating matrices for ${CONFIG}..."
+                    python3 matrix_generator.py \
                     -M "$M" -N "$N" -K "$K" \
                     --seed "$SEED" \
                     --out "./tests/magia/mesh/${NAME}/include/test.h"
@@ -61,6 +69,10 @@ for TILES in "${TILES_LIST[@]}"; do
                     FAILED=$((FAILED + 1))
                     continue
                 fi
+                else
+                    echo "Skipping matrix generation for ${CONFIG} (MATRIX_GEN=no)"
+                fi
+                
 
                 make clean build target_platform=magia_v2 tiles=$TILES
 
