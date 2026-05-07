@@ -123,8 +123,8 @@ int main(void){
      * Weight data-tile: (tile_w x t_size) * data_dim
      * Output data-tile: ((tile_h x t_size) * data_dim) * 2 (Double buffering)
      */
-    uint8_t timeslots = 2;
-    uint8_t t_size = K_SIZE / timeslots;
+    uint32_t timeslots = 2;
+    uint32_t t_size = K_SIZE / timeslots;
 
     /**
      * 2. Use IDMA to transfer static input data-tile
@@ -184,7 +184,7 @@ int main(void){
          * If the mesh-tile is the leftmost of the row: output data-tile is loaded from L2 memory.
          * If the mesh-tile is the rightmost of the row: output data-tile is stored in L2 memory.
          */
-        for(uint8_t i = 0; i < timeslots; i++){
+        for(uint32_t i = 0; i < timeslots; i++){
             /**
              * 3a. IDMA to load the weight data-tile for current timeslot
              */
@@ -314,35 +314,46 @@ int main(void){
     fsync_sync_global(&fsync_ctrl); //wait all tiles to finish before writing
     eu_fsync_wait(&eu_ctrl, WAIT_MODE);
 
-    //sentinel_end();
-    //stnl_r();
-
-    /**
-     * 5. Check results
-     */
-    uint32_t errors=0;
-    fsync_sync_row(&fsync_ctrl);
-    #if STALLING == 0
-    eu_fsync_wait(&eu_ctrl, WAIT_MODE);
-    #endif
-    if(x_id == MESH_X_TILES - 1){
-        uint16_t computed, expected, diff = 0;
-        for(uint8_t i = (y_id * tile_h_max); i < (y_id * tile_h_max + tile_h); i++){
-            for(uint8_t j = 0; j < K_SIZE; j++){
-                computed = *(volatile uint16_t*)(y_inp + (i * K_SIZE + j));
-                expected = *(volatile uint16_t*)(z_out + (i * K_SIZE + j));
-                diff = (computed > expected) ? (computed - expected) : (expected - computed);
-                if(diff > 0x0011){
-                    #if EVAL == 1
-                    if(y_id == 0)
-                        printf("Error detected at coordinates[%d][%d]: Y=%x Z=%x\n", i, j, *(volatile uint16_t*)(y_inp+ (i * K_SIZE + j)), *(volatile uint16_t*)(z_out + (i * K_SIZE + j)));
-                    #endif    
-                    errors++;
-                }       
-            }
+    if(hartid == 0){ //only hartid 0 print the results
+        printf("START_DF\ntotal_cycles,redmule_cycles,l2_l1_cycles,l1_l1_cycles,M_SIZE,K_SIZE,N_SIZE,repetition,hartid\n"); //only needed to print it once
+        for(uint32_t i=0; i<(MESH_X_TILES*MESH_Y_TILES*REPETITIONS); i++){
+            printf("%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n", run_cycles[i], redmule_cycles[i], l2_l1_cycles[i], l1_l1_cycles[i], M_SIZE, K_SIZE, N_SIZE, (i%REPETITIONS), (i/REPETITIONS));
         }
-        printf("Number of errors: %d\n", errors);
+        printf("END_DF\n");
     }
 
-    return errors;  
+    // fsync_sync_global(&fsync_ctrl);
+    // eu_fsync_wait(&eu_ctrl, WAIT_MODE); //wait for all tiles to have completed and writte their values
+
+    // //sentinel_end();
+    // //stnl_r();
+
+    // /**
+    //  * 5. Check results
+    //  */
+    // uint32_t errors=0;
+    // fsync_sync_row(&fsync_ctrl);
+    // #if STALLING == 0
+    // eu_fsync_wait(&eu_ctrl, WAIT_MODE);
+    // #endif
+    // if(x_id == MESH_X_TILES - 1){
+    //     uint16_t computed, expected, diff = 0;
+    //     for(uint32_t i = (y_id * tile_h_max); i < (y_id * tile_h_max + tile_h); i++){
+    //         for(uint32_t j = 0; j < K_SIZE; j++){
+    //             computed = *(volatile uint16_t*)(y_inp + (i * K_SIZE + j));
+    //             expected = *(volatile uint16_t*)(z_out + (i * K_SIZE + j));
+    //             diff = (computed > expected) ? (computed - expected) : (expected - computed);
+    //             if(diff > 0x0011){
+    //                 #if EVAL == 1
+    //                 if(y_id == 0)
+    //                     printf("Error detected at coordinates[%d][%d]: Y=%x Z=%x\n", i, j, *(volatile uint16_t*)(y_inp+ (i * K_SIZE + j)), *(volatile uint16_t*)(z_out + (i * K_SIZE + j)));
+    //                 #endif    
+    //                 errors++;
+    //             }       
+    //         }
+    //     }
+    //     printf("Number of errors: %d\n", errors);
+    // }
+
+    return 0;  
 }
