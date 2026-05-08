@@ -33,6 +33,12 @@ tests/magia/mesh/*/include/*.h
 raw_output/*
 sweep_logs/*
 
+# Parsed output
+*.csv
+
+# Python cache
+__pycache__/
+
 # Editor
 .vscode/
 

@@ -14,6 +14,7 @@ def extract_df_from_file(filepath):
     if not match:
         raise ValueError(f"Could not find START_DF / END_DF markers in: {filepath}")
     raw_csv = match.group(1).strip()
+
     return pd.read_csv(io.StringIO(raw_csv))
 
 
@@ -22,8 +23,8 @@ if __name__ == "__main__":
     parser.add_argument("basename",            help="Base name of the executable (e.g. gemv)")
     parser.add_argument("--tiles", type=int,   nargs='+', required=True, help="Tile counts (e.g. --tiles 2 4 8)")
     parser.add_argument("--M",     type=int,   nargs='+', required=True, help="M values (e.g. --M 1)")
-    parser.add_argument("--N",     type=int,   nargs='+', required=True, help="N values (e.g. --N 64 128 256)")
-    parser.add_argument("--K",     type=int,   nargs='+', required=True, help="K values (e.g. --K 64 128 256)")
+    parser.add_argument("--N",     type=int,   nargs='+', required=True, help="N values (e.g. --N 128 256 512)")
+    parser.add_argument("--K",     type=int,   nargs='+', required=True, help="K values (e.g. --K 128 256 512)")
     parser.add_argument("--out",   type=str,   default=None,             help="Output CSV path (default: csv_output/<basename>.csv)")
     args = parser.parse_args()
 
@@ -31,7 +32,7 @@ if __name__ == "__main__":
 
     all_dfs = []
     missing = []
-
+    # columns are: total_cycles,redmule_cycles,l2_l1_cycles,l1_l1_cycles,M_SIZE,K_SIZE,N_SIZE,repetition,hartid
     for tiles, M, N, K in product(args.tiles, args.M, args.N, args.K):
         filepath = f"raw_output/{args.basename}/{args.basename}_T{tiles}_M{M}_N{N}_K{K}.txt"
         try:
@@ -43,9 +44,10 @@ if __name__ == "__main__":
                 axis=1
             )
             df["flops_per_cycle"] = df["flops"] / df["total_cycles"]
-            df["idle_sync_cycles"] = df["total_cycles"] - df["redmule_cycles"] - df["dma_cycles"]
+            df["idle_sync_cycles"] = df["total_cycles"] - df["redmule_cycles"] - df["l2_l1_cycles"] - df["l1_l1_cycles"]
             all_dfs.append(df)
-        except (FileNotFoundError, ValueError) as e:
+        except Exception as e:
+            print(f"Configuration T{tiles}_M{M}_N{N}_K{K} is missing or malformed: {e}")
             missing.append(filepath)
 
     if not all_dfs:

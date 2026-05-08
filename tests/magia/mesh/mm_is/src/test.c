@@ -322,6 +322,9 @@ int main(void){
         printf("END_DF\n");
     }
 
+    fsync_sync_global(&fsync_ctrl); //wait all tiles to finish before writing
+    eu_fsync_wait(&eu_ctrl, WAIT_MODE);
+
     // fsync_sync_global(&fsync_ctrl);
     // eu_fsync_wait(&eu_ctrl, WAIT_MODE); //wait for all tiles to have completed and writte their values
 
