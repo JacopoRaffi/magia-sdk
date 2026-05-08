@@ -16,8 +16,8 @@ fi
 # -----------------------------------------------------------------------
 # Sweep parameters — edit these to change the configs
 # -----------------------------------------------------------------------
-TILES_LIST=(2)
-M_LIST=(128 256 512) 
+TILES_LIST=(2 4 8 16)
+M_LIST=(128 256 512) # 1024 2048)
 N_LIST=(128 256 512) # 1024 2048)
 K_LIST=(128 256 512) # 1024 2048)
 # TILES_LIST=(16)  # for mm_os just re-do from 16x16
@@ -47,7 +47,7 @@ for TILES in "${TILES_LIST[@]}"; do
         for N in "${N_LIST[@]}"; do
             for K in "${K_LIST[@]}"; do
 
-                if [ "$K" -ne "$N" ]; then # just for GEMV cases, skip non-square configs for now...
+                if [ "$K" -ne "$N" ]; then # skip non-square configs for now...
                     continue
                 fi
 
@@ -67,7 +67,7 @@ for TILES in "${TILES_LIST[@]}"; do
                     echo "[FAIL] matrix_generator.py failed for ${CONFIG}"
                     echo "$OUTPUT_NAME  (generator failed)" >> "$FAIL_LOG"
                     FAILED=$((FAILED + 1))
-                    continue
+                    exit 1
                 fi
                 else
                     echo "Skipping matrix generation for ${CONFIG} (MATRIX_GEN=no)"
@@ -80,7 +80,7 @@ for TILES in "${TILES_LIST[@]}"; do
                     echo "[FAIL] build failed for ${CONFIG}"
                     echo "$OUTPUT_NAME  (build failed)" >> "$FAIL_LOG"
                     FAILED=$((FAILED + 1))
-                    continue
+                    exit 1
                 fi
 
                 echo "============================================="
@@ -91,7 +91,7 @@ for TILES in "${TILES_LIST[@]}"; do
                 make run test="test_${NAME}" platform=gvsoc tiles=$TILES > "${RAW_OUTPUT_DIR}/${OUTPUT_NAME}.txt"
 
                 if [ $? -ne 0 ]; then
-                    echo "[FAIL] run failed for ${CONFIG}"
+                    echo "[FAIL] run failed for ${CONFIG}: error code $?"
                     echo "$OUTPUT_NAME  (run failed)" >> "$FAIL_LOG"
                     FAILED=$((FAILED + 1))
                     continue
@@ -109,6 +109,6 @@ echo ""
 echo "============================================="
 echo " Sweep complete: ${PASSED}/${TOTAL} passed"
 if [ "$FAILED" -gt 0 ]; then
-    echo " ${FAILED} failed — see ${FAIL_LOG}"
+    echo "${FAILED} failed — see ${FAIL_LOG}"
 fi
 echo "============================================="

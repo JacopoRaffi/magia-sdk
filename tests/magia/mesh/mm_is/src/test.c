@@ -317,7 +317,7 @@ int main(void){
     if(hartid == 0){ //only hartid 0 print the results
         printf("START_DF\ntotal_cycles,redmule_cycles,l2_l1_cycles,l1_l1_cycles,M_SIZE,K_SIZE,N_SIZE,repetition,hartid\n"); //only needed to print it once
         for(uint32_t i=0; i<(MESH_X_TILES*MESH_Y_TILES*REPETITIONS); i++){
-            printf("%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n", run_cycles[i], redmule_cycles[i], l2_l1_cycles[i], l1_l1_cycles[i], M_SIZE, K_SIZE, N_SIZE, (i%REPETITIONS), (i/REPETITIONS));
+            printf("%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n", run_cycles[i], redmule_cycles[i], l2_l1_cycles[i], l1_l1_cycles[i], M_SIZE, K_SIZE, N_SIZE, (i%REPETITIONS), (i/REPETITIONS));
         }
         printf("END_DF\n");
     }
