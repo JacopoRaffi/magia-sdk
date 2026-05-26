@@ -21,7 +21,7 @@
 #include "test.h"
 
 #define REPETITIONS 5
-uint32_t run_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array
+uint32_t fsync_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array
 uint32_t redmule_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array (only the cycles spent computing, without the DMA transfers)
 uint32_t l1_l1_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array (only the cycles spent in DMA transfers l1-l1)
 uint32_t l2_l1_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array (only the cycles spent in DMA transfers l2-l1)
@@ -38,12 +38,12 @@ int main(void){
      * Initialize the controllers for the idma, redmule, fsync and event unit.
      * Move in identity matrix.
      */
-    zero_buffer(run_cycles, MESH_X_TILES * MESH_Y_TILES * REPETITIONS); //be sure they are 0
+    zero_buffer(fsync_cycles, MESH_X_TILES * MESH_Y_TILES * REPETITIONS); //be sure they are 0
     zero_buffer(redmule_cycles, MESH_X_TILES * MESH_Y_TILES * REPETITIONS);
     zero_buffer(l1_l1_cycles, MESH_X_TILES * MESH_Y_TILES * REPETITIONS);
     zero_buffer(l2_l1_cycles, MESH_X_TILES * MESH_Y_TILES * REPETITIONS);
 
-    uint32_t start_run, end_run;
+    uint32_t start_fsync, end_fsync;
     uint32_t start_redmule, end_redmule;
     uint32_t start_l1_l1, end_l1_l1;
     uint32_t start_l2_l1, end_l2_l1;
@@ -180,7 +180,6 @@ int main(void){
         }
         fsync_sync_global(&fsync_ctrl);
         eu_fsync_wait(&eu_ctrl, WAIT_MODE); //wait tiles to start "together"
-        start_run = perf_get_cycles();
 
         start_l2_l1 = perf_get_cycles();
         idma_memcpy_1d(&idma_ctrl, 0, axi_addr_x, obi_addr_x, len_x);
@@ -216,8 +215,11 @@ int main(void){
         redmule_cycles[(hartid)*REPETITIONS + r] += (end_redmule - start_redmule);
 
         // Wait for all tiles to be awake and ready to start the kernel
+        start_fsync = perf_get_cycles();
         fsync_sync_global(&fsync_ctrl);
         eu_fsync_wait(&eu_ctrl, WAIT_MODE);
+        end_fsync = perf_get_cycles();
+        fsync_cycles[(hartid)*REPETITIONS + r] += (end_fsync - start_fsync);
 
         /**
          * 4. Reduce partial GeMV.
@@ -232,8 +234,6 @@ int main(void){
             eu_idma_wait_o2a(&eu_ctrl, WAIT_MODE);
             end_l2_l1 = perf_get_cycles();
             l2_l1_cycles[(hartid)*REPETITIONS + r] += (end_l2_l1 - start_l2_l1);
-            end_run = perf_get_cycles();
-            run_cycles[(hartid)*REPETITIONS + r] = end_run - start_run;
         }
 
         axi_addr_y = (uint32_t) y_out + (y_id*tile_w*2);
@@ -347,24 +347,29 @@ int main(void){
                         l2_l1_cycles[(hartid)*REPETITIONS + r] += (end_l2_l1 - start_l2_l1);
                     }
                 }
+                start_fsync = perf_get_cycles();
                 fsync_sync_row(&fsync_ctrl);
                 eu_fsync_wait(&eu_ctrl, WAIT_MODE);
+                end_fsync = perf_get_cycles();
+                fsync_cycles[(hartid)*REPETITIONS + r] += (end_fsync - start_fsync);
             }
 
             //printf("I'm done dog\n");
-            end_run = perf_get_cycles();
-            run_cycles[(hartid)*REPETITIONS + r] = end_run - start_run;
+            //run_cycles[(hartid)*REPETITIONS + r] = end_run - start_run;
+            start_fsync = perf_get_cycles();
             fsync_sync_global(&fsync_ctrl);
             eu_fsync_wait(&eu_ctrl, WAIT_MODE);
+            end_fsync = perf_get_cycles();
+            fsync_cycles[(hartid)*REPETITIONS + r] += (end_fsync - start_fsync);
         }
     }
 
     fsync_sync_global(&fsync_ctrl);
     eu_fsync_wait(&eu_ctrl, WAIT_MODE); //wait for all tiles to have completed and writte their values
     if(hartid == 0){ //only hartid 0 print the results
-        printf("START_DF\ntotal_cycles,redmule_cycles,l2_l1_cycles,l1_l1_cycles,M_SIZE,K_SIZE,N_SIZE,repetition,hartid\n"); //only needed to print it once
+        printf("START_DF\nfsync_cycles,redmule_cycles,l2_l1_cycles,l1_l1_cycles,M_SIZE,K_SIZE,N_SIZE,repetition,hartid\n"); //only needed to print it once
         for(uint32_t i=0; i<(MESH_X_TILES*MESH_Y_TILES*REPETITIONS); i++){
-            printf("%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n", run_cycles[i], redmule_cycles[i], l2_l1_cycles[i], l1_l1_cycles[i], M_SIZE, K_SIZE, N_SIZE, (i%REPETITIONS), (i/REPETITIONS));
+            printf("%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d,%0d\n", fsync_cycles[i], redmule_cycles[i], l2_l1_cycles[i], l1_l1_cycles[i], M_SIZE, K_SIZE, N_SIZE, (i%REPETITIONS), (i/REPETITIONS));
         }
         printf("END_DF\n");
     }

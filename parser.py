@@ -28,13 +28,13 @@ if __name__ == "__main__":
     parser.add_argument("--out",   type=str,   default=None,             help="Output CSV path (default: csv_output/<basename>.csv)")
     args = parser.parse_args()
 
-    out_path = args.out or f"./csv_output/{args.basename}.csv"
+    out_path = args.out or f"./csv_output/{args.basename}_fsync.csv"
 
     all_dfs = []
     missing = []
     # columns are: total_cycles,redmule_cycles,l2_l1_cycles,l1_l1_cycles,M_SIZE,K_SIZE,N_SIZE,repetition,hartid
     for tiles, M, N, K in product(args.tiles, args.M, args.N, args.K):
-        filepath = f"raw_output/{args.basename}/{args.basename}_T{tiles}_M{M}_N{N}_K{K}.txt"
+        filepath = f"raw_output/{args.basename}/{args.basename}_T{tiles}_M{M}_N{N}_K{K}_fsync.txt"
         try:
             df = extract_df_from_file(filepath)
             df["mesh_dim"] = tiles
@@ -43,8 +43,9 @@ if __name__ == "__main__":
                 lambda row: compute_flops(row["M_SIZE"], row["K_SIZE"], row["N_SIZE"]), 
                 axis=1
             )
+            df['total_cycles'] = df["redmule_cycles"] + df["l2_l1_cycles"] + df["l1_l1_cycles"] + df['fsync_cycles']
             df["flops_per_cycle"] = df["flops"] / df["total_cycles"]
-            df["idle_sync_cycles"] = df["total_cycles"] - df["redmule_cycles"] - df["l2_l1_cycles"] - df["l1_l1_cycles"]
+            # df["idle_sync_cycles"] = df["total_cycles"] - df["redmule_cycles"] - df["l2_l1_cycles"] - df["l1_l1_cycles"]
             all_dfs.append(df)
         except Exception as e:
             print(f"Configuration T{tiles}_M{M}_N{N}_K{K} is missing or malformed: {e}")

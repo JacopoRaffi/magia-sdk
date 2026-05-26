@@ -16,7 +16,7 @@ fi
 # -----------------------------------------------------------------------
 # Sweep parameters — edit these to change the configs
 # -----------------------------------------------------------------------
-TILES_LIST=(2 4 8 16)
+TILES_LIST=(2)
 M_LIST=(128 256 512) # 1024 2048)
 N_LIST=(128 256 512) # 1024 2048)
 K_LIST=(128 256 512) # 1024 2048)
@@ -88,7 +88,7 @@ for TILES in "${TILES_LIST[@]}"; do
                 echo "============================================="
 
                 # Run
-                make run test="test_${NAME}" platform=gvsoc tiles=$TILES > "${RAW_OUTPUT_DIR}/${OUTPUT_NAME}.txt"
+                make run test="test_${NAME}" platform=gvsoc tiles=$TILES > "${RAW_OUTPUT_DIR}/${OUTPUT_NAME}_fsync.txt"
 
                 if [ $? -ne 0 ]; then
                     echo "[FAIL] run failed for ${CONFIG}: error code $?"
