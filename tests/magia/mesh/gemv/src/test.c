@@ -20,7 +20,7 @@
 
 #include "test.h"
 
-#define REPETITIONS 5
+#define REPETITIONS 6
 uint32_t fsync_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array
 uint32_t redmule_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array (only the cycles spent computing, without the DMA transfers)
 uint32_t l1_l1_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array (only the cycles spent in DMA transfers l1-l1)
@@ -138,44 +138,43 @@ int main(void){
 
     // printf("Blocking dimensions: height %0d, width %0d\n", tile_h, tile_w);
 
-    /**
+    for(uint32_t r = 0; r < REPETITIONS; r++){
+        /**
      * 2. Use iDMA to transfer indentity matrix.
      */
-    uint32_t len_id  = tile_w * 2;
-    uint32_t std_id  = K_SIZE * 2;
-    uint32_t reps_id = tile_w;
-    uint32_t obi_addr_id = (l1_tile_base);
-    uint32_t axi_addr_id = (uint32_t) id_mat; 
+        uint32_t len_id  = tile_w * 2;
+        uint32_t std_id  = K_SIZE * 2;
+        uint32_t reps_id = tile_w;
+        uint32_t obi_addr_id = (l1_tile_base);
+        uint32_t axi_addr_id = (uint32_t) id_mat; 
 
-    /**
-     * 2a. Use iDMA to transfer bias blocks.
-     * To avoid accumulating the bias multiple times only one tile per row fetches it, the rest fetch the 0 matrix.
-     * The leftmost tile is the root of the reduction tree so it fetches the bias.
-     */
-    uint32_t len_y = tile_w * 2;
-    uint32_t obi_addr_y = obi_addr_id + (tile_w * tile_w * 2);
-    uint32_t axi_addr_y = (x_id == 0) ? (uint32_t) y_inp + (y_id * tile_w * 2) : (uint32_t) y_out + (y_id * tile_w * 2);
-  
-    /**
-     * 2b. Use iDMA to transfer weight matrix blocks.
-     */
-    uint32_t len_w  = tile_w*2;
-    uint32_t std_w  = K_SIZE*2;
-    uint32_t reps_w = (uint32_t) tile_h;
-    uint32_t obi_addr_w = obi_addr_y + (tile_w * 2);
-    uint32_t axi_addr_w = (uint32_t) w_inp + (x_id * tile_h * K_SIZE * 2) + (y_id * tile_w * 2); 
-  
-    /**
-     * 2c. Use iDMA to transfer input vector blocks.
-     */
-    uint32_t len_x = tile_h * 2;
-    uint32_t obi_addr_x = obi_addr_w + (tile_w * tile_h * 2);
-    uint32_t axi_addr_x = (uint32_t) x_inp + (x_id * tile_h * 2); 
-
-    for(uint32_t r = 0; r < REPETITIONS; r++){
+        /**
+         * 2a. Use iDMA to transfer bias blocks.
+         * To avoid accumulating the bias multiple times only one tile per row fetches it, the rest fetch the 0 matrix.
+         * The leftmost tile is the root of the reduction tree so it fetches the bias.
+         */
+        uint32_t len_y = tile_w * 2;
+        uint32_t obi_addr_y = obi_addr_id + (tile_w * tile_w * 2);
+        uint32_t axi_addr_y = (x_id == 0) ? (uint32_t) y_inp + (y_id * tile_w * 2) : (uint32_t) y_out + (y_id * tile_w * 2);
+    
+        /**
+         * 2b. Use iDMA to transfer weight matrix blocks.
+         */
+        uint32_t len_w  = tile_w*2;
+        uint32_t std_w  = K_SIZE*2;
+        uint32_t reps_w = (uint32_t) tile_h;
+        uint32_t obi_addr_w = obi_addr_y + (tile_w * 2);
+        uint32_t axi_addr_w = (uint32_t) w_inp + (x_id * tile_h * K_SIZE * 2) + (y_id * tile_w * 2); 
+    
+        /**
+         * 2c. Use iDMA to transfer input vector blocks.
+         */
+        uint32_t len_x = tile_h * 2;
+        uint32_t obi_addr_x = obi_addr_w + (tile_w * tile_h * 2);
+        uint32_t axi_addr_x = (uint32_t) x_inp + (x_id * tile_h * 2); 
         if(hartid == 0){
             for (uint32_t i = 0; i < N_SIZE; i++){ //need to be reinitialized else we have wrong results
-                *(volatile uint16_t*)(y_out + i) = 0;
+                *(volatile uint16_t*)(y_out + i) = 0x0000;
             }
         }
         fsync_sync_global(&fsync_ctrl);
@@ -236,15 +235,16 @@ int main(void){
             l2_l1_cycles[(hartid)*REPETITIONS + r] += (end_l2_l1 - start_l2_l1);
         }
 
-        axi_addr_y = (uint32_t) y_out + (y_id*tile_w*2);
-        start_l2_l1 = perf_get_cycles();
-        idma_memcpy_1d(&idma_ctrl, 1, axi_addr_y, obi_addr_y, len_y);
-        eu_idma_wait_o2a(&eu_ctrl, WAIT_MODE);
-        end_l2_l1 = perf_get_cycles();
-        l2_l1_cycles[(hartid)*REPETITIONS + r] += (end_l2_l1 - start_l2_l1);
+        // axi_addr_y = (uint32_t) y_out + (y_id*tile_w*2);
+        // start_l2_l1 = perf_get_cycles();
+        // idma_memcpy_1d(&idma_ctrl, 1, axi_addr_y, obi_addr_y, len_y);
+        // eu_idma_wait_o2a(&eu_ctrl, WAIT_MODE);
+        // end_l2_l1 = perf_get_cycles();
+        // l2_l1_cycles[(hartid)*REPETITIONS + r] += (end_l2_l1 - start_l2_l1);
         if(MESH_2_POWER != 0){
             uint32_t log_tree_mask = 1;
             uint32_t log_tree_bit  = 1;
+            
             for (int i = 0; i < reduce_phases; i++){
             #if defined(BASELINE_K2)
                 if (i == 0) {   // First level of the tree
@@ -356,6 +356,7 @@ int main(void){
 
             //printf("I'm done dog\n");
             //run_cycles[(hartid)*REPETITIONS + r] = end_run - start_run;
+
             start_fsync = perf_get_cycles();
             fsync_sync_global(&fsync_ctrl);
             eu_fsync_wait(&eu_ctrl, WAIT_MODE);

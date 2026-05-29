@@ -28,13 +28,13 @@ if __name__ == "__main__":
     parser.add_argument("--out",   type=str,   default=None,             help="Output CSV path (default: csv_output/<basename>.csv)")
     args = parser.parse_args()
 
-    out_path = args.out or f"./csv_output/{args.basename}_fsync.csv"
+    out_path = args.out or f"./csv_output/{args.basename}.csv"
 
     all_dfs = []
     missing = []
     # columns are: total_cycles,redmule_cycles,l2_l1_cycles,l1_l1_cycles,M_SIZE,K_SIZE,N_SIZE,repetition,hartid
     for tiles, M, N, K in product(args.tiles, args.M, args.N, args.K):
-        filepath = f"raw_output/{args.basename}/{args.basename}_T{tiles}_M{M}_N{N}_K{K}_fsync.txt"
+        filepath = f"raw_output/{args.basename}/{args.basename}_T{tiles}_M{M}_N{N}_K{K}.txt"
         try:
             df = extract_df_from_file(filepath)
             df["mesh_dim"] = tiles
