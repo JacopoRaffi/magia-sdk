@@ -14,8 +14,8 @@
 #include "eventunit.h"
 
 #define WAIT_MODE WFE
-#define REPETITIONS 5
-//uint32_t run_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array
+#define REPETITIONS 6
+
 uint32_t redmule_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array (only the cycles spent computing, without the DMA transfers)
 uint32_t l1_l1_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array (only the cycles spent in DMA transfers l1-l1)
 uint32_t l2_l1_cycles[MESH_X_TILES * MESH_Y_TILES * REPETITIONS]; //each tile will save its values in this array (only the cycles spent in DMA transfers l2-l1)
@@ -153,7 +153,7 @@ int main(void){
     uint32_t len_y = (uint32_t) (t_size * 2);
     uint32_t std_y = (uint32_t) (K_SIZE * 2);
     uint32_t reps_y = (uint32_t) tile_h;
-    uint32_t axi_addr_y = (uint32_t) y_inp + (y_id * K_SIZE * tile_h_max * 2);
+    uint32_t axi_addr_y = (uint32_t) y_out + (y_id * K_SIZE * tile_h_max * 2);
     
     /**
      * 2c. Initialize the obi addresses for the output data-tile buffers.
@@ -163,6 +163,46 @@ int main(void){
 
     //sentinel_start();
     for(uint32_t r = 0; r < REPETITIONS; r++){
+        /**
+     * 2. Use IDMA to transfer static input data-tile
+     */
+        uint32_t len_x = tile_w * 2;
+        uint32_t std_x = N_SIZE * 2;
+        uint32_t reps_x = (uint32_t) tile_h;
+        uint32_t obi_addr_x = (l1_tile_base);
+        uint32_t axi_addr_x = (uint32_t) x_inp + (y_id * N_SIZE * tile_h_max * 2) + (tile_w_max * x_id * 2);
+        
+        /**
+         * 2a. Initalize the IDMA transfer variables for weight data-tile transfers.
+         */
+        uint32_t len_w = (uint32_t) (t_size * 2);
+        uint32_t std_w = (uint32_t) (K_SIZE * 2);
+        uint32_t reps_w = (uint32_t) tile_w;
+        uint32_t obi_addr_w = obi_addr_x + (tile_h * tile_w * 2);
+        uint32_t axi_addr_w = (uint32_t) w_inp + (x_id * K_SIZE * tile_w_max * 2);
+
+        /**
+         * 2b. Initalize the IDMA transfer variables for output data-tile transfers.
+         */
+        uint32_t len_y = (uint32_t) (t_size * 2);
+        uint32_t std_y = (uint32_t) (K_SIZE * 2);
+        uint32_t reps_y = (uint32_t) tile_h;
+        uint32_t axi_addr_y = (uint32_t) y_out + (y_id * K_SIZE * tile_h_max * 2);
+        
+        /**
+         * 2c. Initialize the obi addresses for the output data-tile buffers.
+         */
+        uint32_t obi_addr_y_0 = obi_addr_w + (tile_w * t_size * 2);
+        uint32_t obi_addr_y_1 = obi_addr_y_0 + (tile_h * t_size * 2);
+
+        if(hartid == 0){
+            for (uint32_t i = 0; i < M_SIZE*K_SIZE; i++){ //need to be reinitialized else we have wrong results
+                *(volatile uint16_t*)(y_out + i) = 0x0000;
+            }
+        }
+        fsync_sync_global(&fsync_ctrl);
+        eu_fsync_wait(&eu_ctrl, WAIT_MODE); //wait tiles to start "together"
+
         fsync_sync_global(&fsync_ctrl);
         eu_fsync_wait(&eu_ctrl, WAIT_MODE);
         //start_run = perf_get_cycles();
@@ -341,38 +381,35 @@ int main(void){
     fsync_sync_global(&fsync_ctrl); //wait all tiles to finish before writing
     eu_fsync_wait(&eu_ctrl, WAIT_MODE);
 
-    // fsync_sync_global(&fsync_ctrl);
-    // eu_fsync_wait(&eu_ctrl, WAIT_MODE); //wait for all tiles to have completed and writte their values
-
     // //sentinel_end();
     // //stnl_r();
 
     // /**
     //  * 5. Check results
     //  */
-    // uint32_t errors=0;
-    // fsync_sync_row(&fsync_ctrl);
-    // #if STALLING == 0
-    // eu_fsync_wait(&eu_ctrl, WAIT_MODE);
-    // #endif
-    // if(x_id == MESH_X_TILES - 1){
-    //     uint16_t computed, expected, diff = 0;
-    //     for(uint32_t i = (y_id * tile_h_max); i < (y_id * tile_h_max + tile_h); i++){
-    //         for(uint32_t j = 0; j < K_SIZE; j++){
-    //             computed = *(volatile uint16_t*)(y_inp + (i * K_SIZE + j));
-    //             expected = *(volatile uint16_t*)(z_out + (i * K_SIZE + j));
-    //             diff = (computed > expected) ? (computed - expected) : (expected - computed);
-    //             if(diff > 0x0011){
-    //                 #if EVAL == 1
-    //                 if(y_id == 0)
-    //                     printf("Error detected at coordinates[%d][%d]: Y=%x Z=%x\n", i, j, *(volatile uint16_t*)(y_inp+ (i * K_SIZE + j)), *(volatile uint16_t*)(z_out + (i * K_SIZE + j)));
-    //                 #endif    
-    //                 errors++;
-    //             }       
-    //         }
-    //     }
-    //     printf("Number of errors: %d\n", errors);
-    // }
+    uint32_t errors=0;
+    fsync_sync_row(&fsync_ctrl);
+    #if STALLING == 0
+    eu_fsync_wait(&eu_ctrl, WAIT_MODE);
+    #endif
+    if(x_id == MESH_X_TILES - 1){
+        uint16_t computed, expected, diff = 0;
+        for(uint32_t i = (y_id * tile_h_max); i < (y_id * tile_h_max + tile_h); i++){
+            for(uint32_t j = 0; j < K_SIZE; j++){
+                computed = *(volatile uint16_t*)(y_out + (i * K_SIZE + j));
+                expected = *(volatile uint16_t*)(z_out + (i * K_SIZE + j));
+                diff = (computed > expected) ? (computed - expected) : (expected - computed);
+                if(diff > 0x0011){
+                    #if EVAL == 1
+                    if(y_id == 0)
+                        printf("Error detected at coordinates[%d][%d]: Y=%x Z=%x\n", i, j, *(volatile uint16_t*)(y_out+ (i * K_SIZE + j)), *(volatile uint16_t*)(z_out + (i * K_SIZE + j)));
+                    #endif    
+                    errors++;
+                }       
+            }
+        }
+        printf("Number of errors: %d\n", errors);
+    }
 
     return 0;  
 }
