@@ -70,7 +70,7 @@ def generate(
     Z = (Y + X @ W).astype(np.float32)
 
     # y_out is always zero-initialized
-    y_out = np.zeros((M, N), dtype=np.float32)
+    y_out = np.zeros((M, K), dtype=np.float32)
 
     guard = f"_MAT_VEC_GEN_{M}x{N}x{K}_"
 
@@ -98,7 +98,7 @@ def generate(
         body = format_array(vals, cols=64)
         return f"extern uint16_t {name} [{type_str}] = {{\n{body}}};\n\n"
 
-    lines.append(emit_array("y_out",  "M_SIZE*N_SIZE", y_out))
+    lines.append(emit_array("y_out",  "M_SIZE*K_SIZE", y_out))
     lines.append(emit_array("x_inp",   "M_SIZE*N_SIZE", X))
     lines.append(emit_array("w_inp",   "N_SIZE*K_SIZE", W))
     lines.append(emit_array("y_inp",   "M_SIZE*K_SIZE", Y))
