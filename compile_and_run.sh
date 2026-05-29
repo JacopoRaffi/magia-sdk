@@ -16,8 +16,8 @@ fi
 # -----------------------------------------------------------------------
 # Sweep parameters — edit these to change the configs
 # -----------------------------------------------------------------------
-TILES_LIST=(2 4 8 16) # 4 8 16)
-M_LIST=(1) # 1024 2048)
+TILES_LIST=(2 4 8 16)
+M_LIST=(128 256 512) # 1024 2048)
 N_LIST=(128 256 512) # 1024 2048)
 K_LIST=(128 256 512) # 1024 2048)
 SEED=1
@@ -68,7 +68,15 @@ for TILES in "${TILES_LIST[@]}"; do
                 else
                     echo "Skipping matrix generation for ${CONFIG} (MATRIX_GEN=no)"
                 fi
-                
+
+cat > "./tests/magia/mesh/CMakeLists.txt" <<EOF
+# Copyright 2025 University of Bologna.
+# Licensed under the Apache License, Version 2.0, see LICENSE for details.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Alberto Dequino <alberto.dequino@unibo.it>
+add_subdirectory(${NAME})
+EOF
 
                 make clean build target_platform=magia_v2 tiles=$TILES
 
