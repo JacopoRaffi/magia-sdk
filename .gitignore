@@ -25,6 +25,7 @@ magia_deployment.egg*
 cache_fill.h
 regression_output*
 scripts/wave.do
+llvm/
 
 # Generated test inputs
 tests/magia/mesh/gemm/*/include/*
@@ -42,4 +43,4 @@ __pycache__/
 
 # Editor
 .vscode/
-install_magiav2_tutorial.txt
+llvm/
