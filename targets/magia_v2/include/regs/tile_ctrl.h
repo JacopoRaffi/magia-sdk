@@ -118,8 +118,6 @@
 #define EU_DISPATCH_EVT_BIT           (1)          // Dispatch event
 #define EU_SYNC_EVT_MASK              (0x00000001) // bit 0
 #define EU_DISPATCH_EVT_MASK          (0x00000002) // bit 1
-<<<<<<< HEAD
-=======
 
 // Spatz events (accelerator events [8] + cluster events [23])
 #define EU_SPATZ_DONE_BIT             (8)  // Spatz completion event (acc_events_array[0][0])
@@ -127,7 +125,6 @@
 #define EU_SPATZ_DONE_MASK            (1 << EU_SPATZ_DONE_BIT)                   // 0x100
 #define EU_SPATZ_START_MASK           (1 << EU_SPATZ_START_BIT)                  // 0x800000
 #define EU_SPATZ_ALL_MASK             (EU_SPATZ_DONE_MASK | EU_SPATZ_START_MASK) // 0x800100
->>>>>>> upstream/main
 
 //=============================================================================
 // IDMA Register Addresses
@@ -242,8 +239,4 @@ typedef enum {
 /* Status register bits */
 #define FSYNC_STATUS_BUSY_MASK   (1 << 2)
 
-<<<<<<< HEAD
 #endif // _TILE_REG_DEFS_
-=======
-#endif // _TILE_REG_DEFS_
->>>>>>> upstream/main

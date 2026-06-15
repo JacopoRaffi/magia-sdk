@@ -16,10 +16,10 @@ fi
 # -----------------------------------------------------------------------
 # Sweep parameters — edit these to change the configs
 # -----------------------------------------------------------------------
-TILES_LIST=(2 4 8 16)
-M_LIST=(128 256 512) # 1024 2048)
-N_LIST=(128 256 512) # 1024 2048)
-K_LIST=(128 256 512) # 1024 2048)
+TILES_LIST=(4)
+M_LIST=(1) # 1024 2048)
+N_LIST=(1) # 1024 2048)
+K_LIST=(1) # 1024 2048)
 SEED=1
 # -----------------------------------------------------------------------
 
@@ -78,7 +78,7 @@ cat > "./tests/magia/mesh/CMakeLists.txt" <<EOF
 add_subdirectory(${NAME})
 EOF
 
-                make clean build target_platform=magia_v2 tiles=$TILES
+                make clean build target_platform=magia_v2 tiles=$TILES spatz=0
 
                 if [ $? -ne 0 ]; then
                     echo "[FAIL] build failed for ${CONFIG}"
@@ -92,7 +92,8 @@ EOF
                 echo "============================================="
 
                 # Run
-                make run test="test_${NAME}" platform=gvsoc tiles=$TILES > "${RAW_OUTPUT_DIR}/${OUTPUT_NAME}.txt"
+                make run_profiling test=test_brah tiles=4 platform=gvsoc profile_tile=0
+                # make run test="test_${NAME}" platform=gvsoc tiles=$TILES > "${RAW_OUTPUT_DIR}/${OUTPUT_NAME}.txt"
 
                 if [ $? -ne 0 ]; then
                     echo "[FAIL] run failed for ${CONFIG}: error code $?"

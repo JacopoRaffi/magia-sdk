@@ -201,13 +201,13 @@ int main(void){
             end_l2_l1 = perf_get_cycles();
             l2_l1_cycles[(hartid)*REPETITIONS + r] += (end_l2_l1 - start_l2_l1);
 
-            start_l1_l1 = perf_get_cycles();
+            start_l2_l1 = perf_get_cycles();
             idma_memcpy_2d(&idma_ctrl, 0, axi_addr_w + (t_size * K_SIZE * i * 2), obi_addr_w, len_w, std_w, reps_w);
             #if STALLING == 0
             eu_idma_wait_a2o(&eu_ctrl, WAIT_MODE);
             #endif
-            end_l1_l1 = perf_get_cycles();
-            l1_l1_cycles[(hartid)*REPETITIONS + r] += (end_l1_l1 - start_l1_l1);
+            end_l2_l1 = perf_get_cycles();
+            l2_l1_cycles[(hartid)*REPETITIONS + r] += (end_l2_l1 - start_l2_l1);
 
             /**
              * 4b. Multiply and add with Redmule.
