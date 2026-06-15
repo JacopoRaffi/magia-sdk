@@ -19,6 +19,7 @@
 # Magia-sdk Makefile
 
 SHELL 			:= /bin/bash
+CURR_DIR ?= $(shell pwd)
 
 include scripts/deps.env
 
