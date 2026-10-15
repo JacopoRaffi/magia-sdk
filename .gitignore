@@ -71,3 +71,8 @@ gvsoc_config.json
 
 TESTLOG.txt
 trace.perfetto-trace
+
+*.png
+*.jpg
+*.pdf
+*.csv

@@ -1,0 +1,96 @@
+// Copyright 2026 ETH Zurich, University of Bologna and Fondazione Chips-IT.
+// Licensed under the Apache License, Version 2.0, see LICENSE for details.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Row 0: every tile sends a buffer to its EAST neighbour in parallel. The
+// last column only receives. TX slot at L1 base, RX slot at L1 base + RX_OFF.
+
+#include <stdint.h>
+#include "test.h"
+
+#include "tile.h"
+#include "fsync.h"
+#include "mg_idma.h"
+
+#define WAIT_MODE WFE
+
+#define PAY_LEN (DMA_LINE_N_ELEMS * 2)
+#define PATTERN (0xABCD)
+#define RX_OFF  (0x20000)
+
+int main(void)
+{
+    perf_init();
+    uint32_t hartid = get_hartid();
+
+    idma_init();
+    fsync_init();
+    eu_init();
+    eu_clear_events(0xFFFFFFFF);
+    eu_fsync_init(0);
+    eu_idma_init(0);
+
+    uint32_t x_id      = GET_X_ID(hartid);
+    uint32_t last_pos  = MESH_X_TILES - 1;
+    int is_sender      = (GET_Y_ID(hartid) == 0) && (x_id < last_pos);
+    int is_recv        = (GET_Y_ID(hartid) == 0) && (x_id > 0);
+    uint32_t neighbor  = GET_ID(0, x_id + 1);
+
+    uint32_t errors = 0;
+    uint32_t base   = get_l1_base(hartid);
+
+    volatile uint16_t *rx = (volatile uint16_t *)(base + RX_OFF);
+    volatile uint16_t *tx = (volatile uint16_t *)base;
+
+    if (is_recv)
+        for (uint32_t i = 0; i < DMA_LINE_N_ELEMS; i++)
+            rx[i] = 0;
+
+    fsync_sync_global();
+    eu_fsync_wait(WAIT_MODE);
+
+    uint32_t samples[DMA_LINE_N_ITERS];
+    mg_event_t evt;
+
+    for (uint32_t it = 0; it < DMA_LINE_N_ITERS; it++) {
+        if (is_sender)
+            for (uint32_t i = 0; i < DMA_LINE_N_ELEMS; i++)
+                tx[i] = (uint16_t)(PATTERN + it);
+
+        fsync_sync_global();
+        eu_fsync_wait(WAIT_MODE);
+
+        if (is_sender) {
+            uint32_t peer_base = get_l1_base(neighbor);
+            uint32_t t0        = perf_get_cycles();
+
+            mg_idma_memcpy_1d(WAIT_MODE, 1, peer_base + RX_OFF, base, PAY_LEN, &evt, NULL);
+            mg_idma_wait(1, WAIT_MODE, &evt);
+
+            samples[it] = perf_get_cycles() - t0;
+        }
+    }
+
+    fsync_sync_global();
+    eu_fsync_wait(WAIT_MODE);
+
+    if (is_recv) {
+        for (uint32_t i = 0; i < DMA_LINE_N_ELEMS; i++) {
+            if (rx[i] != (uint16_t)(PATTERN + DMA_LINE_N_ITERS - 1)) {
+                errors++;
+                break;
+            }
+        }
+        if (errors)
+            printf("ERR tile %d: payload check failed\n", hartid);
+    }
+
+    if (is_sender) {
+        printf("DF %d,%d,1,%d,", hartid, neighbor, DMA_LINE_N_ELEMS);
+        for (uint32_t k = 0; k < DMA_LINE_N_ITERS; k++)
+            printf("%d;", samples[k]);
+        printf(",%d\n", errors);
+    }
+
+    return (int)errors;
+}

@@ -24,6 +24,15 @@
 #define PERFORMANCE_UTILS_H
 
 /**
+ * @brief Initialize the performance counter
+ * This function initializes the performance counter to zero.
+ */
+static inline void perf_init()
+{
+    asm volatile("csrw 0x320, zero" ::: "memory");
+}
+
+/**
  * @brief Returns the cycles of the performance counter
  * !! WARNING !! AT THE MOMENT OF WRITING (06/05/2026) THIS PROFILING UTILITY ONLY WORKS ON GVSOC.
  * PLEASE USE THE TESTBENCH UTILITIES WHEN PROFILING ON RTL.
@@ -33,11 +42,6 @@ static inline unsigned int perf_get_cycles()
     unsigned int value = 0;
     asm volatile("csrr %0, 0xB00" : "=r"(value));
     return value;
-}
-
-static inline void perf_init()
-{
-    asm volatile("csrw 0x320, zero" ::: "memory");
 }
 
 ///////////// TESTBENCH PROFILING UTILITIES //////////////
